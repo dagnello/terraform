@@ -679,15 +679,15 @@ func resourceVSphereVirtualMachineRead(d *schema.ResourceData, meta interface{})
 		return fmt.Errorf("Invalid network interfaces to set: %#v", networkInterfaces)
 	}
 
-	ip, err := vm.WaitForIP(context.TODO())
-	if err != nil {
-		return err
-	}
-	log.Printf("[DEBUG] ip address: %v", ip)
-	d.SetConnInfo(map[string]string{
-		"type": "ssh",
-		"host": ip,
-	})
+	// ip, err := vm.WaitForIP(context.TODO())
+	// if err != nil {
+	// 	return err
+	// }
+	// log.Printf("[DEBUG] ip address: %v", ip)
+	// d.SetConnInfo(map[string]string{
+	// 	"type": "ssh",
+	// 	"host": ip,
+	// })
 
 	var rootDatastore string
 	for _, v := range mvm.Datastore {
@@ -812,6 +812,7 @@ func addHardDisk(vm *object.VirtualMachine, size, iops int64, diskType string, d
 	log.Printf("[DEBUG] disk controller: %#v\n", controller)
 
 	// TODO Check if diskPath & datastore exist
+	log.Printf("[DEBUG] datastore.Name(): %#v\n", datastore.Name())
 	disk := devices.CreateDisk(controller, fmt.Sprintf("[%v] %v", datastore.Name(), diskPath))
 	existing := devices.SelectByBackingInfo(disk.Backing)
 	log.Printf("[DEBUG] disk: %#v\n", disk)
