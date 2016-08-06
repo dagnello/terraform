@@ -164,6 +164,7 @@ func createFile(client *govmomi.Client, f *file) error {
 				return fmt.Errorf("error %s", err)
 			}
 		}
+		log.Printf("[DEBUG] source_ds.Path(f.sourceFile): %s", source_ds.Path(f.sourceFile))
 		task, err := fm.CopyDatastoreFile(context.TODO(), source_ds.Path(f.sourceFile), source_dc, ds.Path(f.destinationFile), dc, true)
 
 		if err != nil {

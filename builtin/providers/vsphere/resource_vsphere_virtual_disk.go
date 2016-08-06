@@ -115,15 +115,26 @@ func resourceVSphereVirtualDiskCreate(d *schema.ResourceData, meta interface{}) 
 		vDisk.datastore = v.(string)
 	}
 
-	diskPath := fmt.Sprintf("[%v] %v", vDisk.datastore, vDisk.vmdkPath)
+	finder := find.NewFinder(client.Client, true)
 
-	err := createHardDisk(client, vDisk.size, diskPath, vDisk.initType, vDisk.adapterType, vDisk.datacenter)
+	dc, err := finder.Datacenter(context.TODO(), vDisk.datacenter)
+	if err != nil {
+		return fmt.Errorf("error %s", err)
+	}
+	finder = finder.SetDatacenter(dc)
+
+	ds, err := getDatastore(finder, vDisk.datastore)
+	if err != nil {
+		return fmt.Errorf("error %s", err)
+	}
+
+	err = createHardDisk(client, vDisk.size, ds.Path(vDisk.vmdkPath), vDisk.initType, vDisk.adapterType, vDisk.datacenter)
 	if err != nil {
 		return err
 	}
 
-	d.SetId(diskPath)
-	log.Printf("[DEBUG] Virtual Disk id: %v", diskPath)
+	d.SetId(ds.Path(vDisk.vmdkPath))
+	log.Printf("[DEBUG] Virtual Disk id: %v", ds.Path(vDisk.vmdkPath))
 
 	return resourceVSphereVirtualDiskRead(d, meta)
 }
@@ -208,15 +219,22 @@ func resourceVSphereVirtualDiskDelete(d *schema.ResourceData, meta interface{}) 
 		vDisk.datastore = v.(string)
 	}
 
-	dc, err := getDatacenter(client, d.Get("datacenter").(string))
+	finder := find.NewFinder(client.Client, true)
+
+	dc, err := finder.Datacenter(context.TODO(), vDisk.datacenter)
 	if err != nil {
-		return err
+		return fmt.Errorf("error %s", err)
 	}
-	diskPath := fmt.Sprintf("[%v] %v", vDisk.datastore, vDisk.vmdkPath)
+	finder = finder.SetDatacenter(dc)
+
+	ds, err := getDatastore(finder, vDisk.datastore)
+	if err != nil {
+		return fmt.Errorf("error %s", err)
+	}
 
 	virtualDiskManager := object.NewVirtualDiskManager(client.Client)
 
-	task, err := virtualDiskManager.DeleteVirtualDisk(context.TODO(), diskPath, dc)
+	task, err := virtualDiskManager.DeleteVirtualDisk(context.TODO(), ds.Path(vDisk.vmdkPath), dc)
 	if err != nil {
 		return err
 	}
@@ -227,7 +245,7 @@ func resourceVSphereVirtualDiskDelete(d *schema.ResourceData, meta interface{}) 
 		return err
 	}
 
-	log.Printf("[INFO] Deleted disk: %v", diskPath)
+	log.Printf("[INFO] Deleted disk: %v", ds.Path(vDisk.vmdkPath))
 	d.SetId("")
 	return nil
 }
